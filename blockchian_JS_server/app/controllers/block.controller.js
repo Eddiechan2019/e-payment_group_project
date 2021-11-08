@@ -18,31 +18,38 @@ class Block {
 }
 
 exports.generateGenesisBlock = (req, res) => {
-    const index = 0;
-    const timestamp = new Date().getTime();
-    const data = 'Genesis Block';
-    const previousHash = '0';
-    const difficulty = 0
-    const nonce = 0
-    const hash = calculateHash(index, previousHash, timestamp, data, difficulty, nonce)
+    block.find()
+        .then(data => {
+            if (data.length == 0) {
+                const index = 0;
+                const timestamp = new Date().getTime();
+                const data = 'Genesis Block';
+                const previousHash = '0';
+                const difficulty = 1
+                const nonce = 0
+                const hash = calculateHash(index, previousHash, timestamp, data, difficulty, nonce)
 
-    const genesisblock = new block({
-        index: index,
-        hash: hash,
-        previousHash: previousHash,
-        timestamp: timestamp,
-        data: data,
-        difficulty: difficulty,
-        nonce: nonce
-    });
+                const genesisblock = new block({
+                    index: index,
+                    hash: hash,
+                    previousHash: previousHash,
+                    timestamp: timestamp,
+                    data: data,
+                    difficulty: difficulty,
+                    nonce: nonce
+                });
 
-    genesisblock.save().then(data => {
-        res.send(data);
-    }).catch(err => {
-        res.status(500).send({
-            message: err.message || "Some error occurred while generate Gensis Block."
+                genesisblock.save().then(data => {
+                    res.send(data);
+                }).catch(err => {
+                    res.status(500).send({
+                        message: err.message || "Some error occurred while generate Gensis Block."
+                    });
+                });
+            } else {
+                res.send({ message: "Gensis Block has generated!" })
+            }
         });
-    });
 };
 
 //req = block data
@@ -51,7 +58,7 @@ exports.generateNextBlock = (req, res) => {
     block.find().sort({ 'index': -1 })
         .then(data => {
             //check generate GenesisBlock is not
-            if (data !== null && typeof(data) != "undefined") {
+            if (data !== null && typeof(data) != "undefined" && data.length !== 0) {
                 const previousBlock = new block(data[0]);
                 const nextIndex = previousBlock.index + 1;
                 const nextTimeStamp = new Date().getTime()
@@ -109,14 +116,14 @@ function getDifficulty(previousBlock, allBlockData) {
 
 function getAdjustedDifficulty(latestBlock, allBlockData) {
     //sorting - blockchain.lenght - diff.. = diffic.. + 1
-    const prevAdjustmentBlock = allBlockData[DIFFICULTY_ADJUSTMENT_INTERVAL + 1]
+    const prevAdjustmentBlock = allBlockData[DIFFICULTY_ADJUSTMENT_INTERVAL]
     const timeExpected = BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL;
     const timeTaken = latestBlock.timestamp - prevAdjustmentBlock.timestamp;
 
-    if (timeTaken < timeExpected / 2) {
-        return prevAdjustmentBlock + 1;
-    } else if (timeTaken > timeExpected * 2) {
-        return prevAdjustmentBlock.difficulty - 1;
+    if (timeTaken < timeExpected) {
+        return prevAdjustmentBlock.difficulty * (timeExpected / timeTaken);
+    } else if (timeTaken > timeExpected) {
+        return prevAdjustmentBlock.difficulty / (timeTaken / timeExpected);
     } else {
         return prevAdjustmentBlock.difficulty;
     }
