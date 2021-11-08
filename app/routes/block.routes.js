@@ -1,6 +1,8 @@
 module.exports = (app) => {
     const block = require('../controllers/block.controller.js');
 
+    const transaction = require('../controllers/transaction.controller.js');
+
     // // Create a new Note
     // app.post('/notes', block.create);
 
@@ -21,4 +23,5 @@ module.exports = (app) => {
     app.get('/getAllBlockData', block.getAllBlockData);
     app.get('/getLastestBlock', block.getLastestBlock);
 
+    app.get('/test', transaction.getCoinbaseTransaction);
 }
