@@ -17,7 +17,7 @@ exports.generateGenesisBlock = (req, res) => {
     timestamp = new Date().getTime();
     data = 'Genesis Block';
     previousHash = '0';
-    hash = CryptoJS.SHA256(index + previousHash + timestamp + data).toString();;
+    hash = calcuteHash(index + previousHash + timestamp + data)
 
     const genesisblock = new block({
         index: index,
@@ -38,17 +38,11 @@ exports.generateGenesisBlock = (req, res) => {
 
 //req = block data
 exports.generateNextBlock = (req, res) => {
-    function calcuteHash(index, previousHash, timestamp, data) {
-        return CryptoJS.SHA256(index + previousHash + timestamp + data).toString();
-    }
-
-    //check previousblock
-
     block.findOne().sort({ 'index': -1 })
         .then(data => {
             //check generate GenesisBlock is not
             if (data !== null && typeof(data) != "undefined") {
-                const previousBlock = data;
+                const previousBlock = new block(data);
                 const nextIndex = data.index + 1;
                 const nextTimeStamp = new Date().getTime()
                 const block_data = (typeof(req.query.data) != "undefined" && req.query.data !== null) ? req.query.data : "";
@@ -63,17 +57,48 @@ exports.generateNextBlock = (req, res) => {
                     data: block_data
                 });
 
-                newblock.save().then(data => {
-                    res.send(data);
-                }).catch(err => {
-                    res.status(500).send({
-                        message: err.message || "Some error occurred while generate a new Block."
+                if (isValidNewBlock(newblock, previousBlock) === true) {
+                    newblock.save().then(data => {
+                        res.send(data);
+                    }).catch(err => {
+                        res.status(500).send({
+                            message: err.message || "Some error occurred while generate a new Block."
+                        });
                     });
-                });
+                }
+
             } else {
                 res.send({ message: "There is not any blockdata. Please generate GenesisBlock" })
             }
         });
+}
+
+function calcuteHash(index, previousHash, timestamp, data) {
+    return CryptoJS.SHA256(index + previousHash + timestamp + data).toString();
+}
+
+function isValidNewBlock(newBlock, previousBlock) {
+    if (!(newBlock instanceof block) || !(previousBlock instanceof block)) {
+        console.log("invalid  type")
+        return false;
+    }
+
+    if (previousBlock.index + 1 !== newBlock.index) {
+        console.log("invalid index")
+        return false
+    }
+
+    if (previousBlock.hash !== newBlock.previousHash) {
+        console.log("same hash here")
+        return false
+    }
+
+    if (newBlock.hash !== calcuteHash(newBlock.index, newBlock.previousHash, newBlock.timestamp, newBlock.data)) {
+        console.log("invalid hash")
+        return false
+    }
+
+    return true;
 }
 
 //get all block data
