@@ -14,10 +14,10 @@ class Block {
 
 exports.generateGenesisBlock = (req, res) => {
     index = 0;
-    timestamp = 1636044380;
-    hash = '810f9e854ade9bb8730d776ea02622b65c02b82ffa163ecfe4cb151a14412ed4';
+    timestamp = new Date().getTime();
     data = 'Genesis Block';
     previousHash = '0';
+    hash = CryptoJS.SHA256(index + previousHash + timestamp + data).toString();;
 
     const genesisblock = new block({
         index: index,
@@ -42,60 +42,59 @@ exports.generateNextBlock = (req, res) => {
         return CryptoJS.SHA256(index + previousHash + timestamp + data).toString();
     }
 
-    const previousBlock = this.getLatestBlock()
-    const nextIndex = previousBlock.index + 1
-    const nextTimeStamp = new Date().getTime()
-    const nextHash = this.calcuteHash(nextIndex, previousBlock.hash, nextTimeStamp, req.data)
-    return new Block(nextIndex, previousBlock.hash, nextTimeStamp, req.data, nextHash)
+    //check previousblock
+
+    block.findOne().sort({ 'index': -1 })
+        .then(data => {
+            //check generate GenesisBlock is not
+            if (data !== null && typeof(data) != "undefined") {
+                const previousBlock = data;
+                const nextIndex = data.index + 1;
+                const nextTimeStamp = new Date().getTime()
+                const block_data = (typeof(req.query.data) != "undefined" && req.query.data !== null) ? req.query.data : "";
+
+                const nextHash = calcuteHash(nextIndex, previousBlock.hash, nextTimeStamp, block_data)
+
+                const newblock = new block({
+                    index: nextIndex,
+                    hash: nextHash,
+                    previousHash: previousBlock.hash,
+                    timestamp: nextTimeStamp,
+                    data: block_data
+                });
+
+                newblock.save().then(data => {
+                    res.send(data);
+                }).catch(err => {
+                    res.status(500).send({
+                        message: err.message || "Some error occurred while generate a new Block."
+                    });
+                });
+            } else {
+                res.send({ message: "There is not any blockdata. Please generate GenesisBlock" })
+            }
+        });
 }
 
-class BlockChain {
-    constructor() {
-        this.blocks = [this.getGenesisBlock()]
-    }
+//get all block data
+exports.getAllBlockData = (req, res) => {
+    block.find()
+        .then(data => {
+            res.send(data);
+        }).catch(err => {
+            res.status(500).send({
+                message: err.message || "Some error occurred while retrieving block data."
+            });
+        });
+};
 
-    //create the  genesis block
-    getGenesisBlock() {
-        index = 0;
-        timestamp = 1636044380;
-        hash = '810f9e854ade9bb8730d776ea02622b65c02b82ffa163ecfe4cb151a14412ed4';
-        data = 'Genesis Block';
-        previousHash = '0';
-        return new Block(index, timestamp, hash, previousHash, data);
-    }
-
-    calcuteHash(index, previousHash, timestamp, data) {
-        return CryptoJS.SHA256(index + previousHash + timestamp + data).toString();
-    }
-
-    generateNextBlock(blockData) {
-        const previousBlock = this.getLatestBlock()
-        const nextIndex = previousBlock.index + 1
-        const nextTimeStamp = new Date().getTime()
-        const nextHash = this.calcuteHash(nextIndex, previousBlock.hash, nextTimeStamp, blockData)
-        return new Block(nextIndex, previousBlock.hash, nextTimeStamp, blockData, nextHash)
-    }
-
-    isValidNewBlock(newBlock, previousBlock) {
-        // if(
-        //   !(newBlock instanceof Block) ||
-        //   !(previousBlock instanceof Block)
-        // ) {
-        //   return false
-        // }
-
-        if (newBlock.index !== previousBlock.index + 1) {
-            return false
-        }
-
-        if (newBlock.previousHash !== previousBlock.hash) {
-            return false
-        }
-
-        if (this.calcuteHash(newBlock.index, newBlock.previousHash, newBlock.timestamp, newBlock.data) !== newBlock.hash) {
-            return false
-        }
-
-        return true
-    }
+exports.getLastestBlock = (req, res) => {
+    block.findOne().sort({ 'index': -1 })
+        .then(data => {
+            res.send(data);
+        }).catch(err => {
+            res.status(500).send({
+                message: err.message || "Some error occurred while retrieving block data."
+            });
+        });
 }

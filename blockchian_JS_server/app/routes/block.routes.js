@@ -17,4 +17,8 @@ module.exports = (app) => {
     // app.delete('/notes/:noteId', block.delete);
 
     app.get('/generateGenesisBlock', block.generateGenesisBlock);
+    app.get('/generateNextBlock', block.generateNextBlock);
+    app.get('/getAllBlockData', block.getAllBlockData);
+    app.get('/getLastestBlock', block.getLastestBlock);
+
 }
