@@ -22,6 +22,8 @@ module.exports = (app) => {
     app.get('/generateNextBlock', block.generateNextBlock);
     app.get('/getAllBlockData', block.getAllBlockData);
     app.get('/getLastestBlock', block.getLastestBlock);
+    app.get('/generatenextBlockWithTransaction', block.generatenextBlockWithTransaction);
+
 
     app.get('/test', transaction.getCoinbaseTransaction);
 }
