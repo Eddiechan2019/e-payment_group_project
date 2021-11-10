@@ -13,8 +13,6 @@ exports.initWallet = (req, res) => {
         fs.writeFileSync(privateKeyLocation, newPrivateKey);
         res.send({ message: 'new wallet with private key created' })
     }
-
-
 }
 
 exports.getPrivateFromWallet = (req, res) => {
@@ -26,6 +24,15 @@ exports.getPrivateFromWallet = (req, res) => {
     }
 }
 
+exports.getPrivateFromWallet_return = (req, res) => {
+    if (!fs.existsSync(privateKeyLocation)) {
+        return 'Private key has not be generated '
+    } else {
+        const buffer = fs.readFileSync(privateKeyLocation, 'utf8');
+        return buffer.toString();
+    }
+}
+
 exports.getPublicFromWallet = (req, res) => {
     if (getPrivateFromWallet() !== "") {
         res.send(getPublicFromWallet());
@@ -33,6 +40,30 @@ exports.getPublicFromWallet = (req, res) => {
         res.send({ message: "Private key has not be generated " });
     }
 
+}
+
+exports.getPublicFromWallet_return = (req, res) => {
+    if (getPrivateFromWallet() !== "") {
+        return getPublicFromWallet();
+    } else {
+        return "Private key has not be generated ";
+    }
+
+}
+
+exports.getPublic = (req, res) => {
+    if (getPrivateFromWallet() !== "") {
+        res.send(getPublicFromWallet());
+    } else {
+        res.send({ message: "Private key has not be generated " });
+    }
+}
+
+exports.getBalance = (req, res) => {
+    return _(unspentTxOuts)
+        .filter((uTxO) => uTxO.address === address)
+        .map((uTxO) => uTxO.amount)
+        .sum();
 }
 
 function getPrivateFromWallet() {

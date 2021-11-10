@@ -1,29 +1,26 @@
 const block = require('../models/block.model.js');
 const CryptoJS = require('crypto-js')
 
+const transaction = require("./transaction.controller.js");
+const wallet = require("./wallet.controller.js");
+
+const Transaction = require("../models/transaction.model.js");
+const UnspentTxOut = require("../models/unspentTxOut.model.js");
+const unspentTxOutSchema = require("../models/unspentTxOut_mongo.model.js");
+
 const BLOCK_GENERATION_INTERVAL = 10;
 const DIFFICULTY_ADJUSTMENT_INTERVAL = 10;
 
-class Block {
+let unspentTxOuts = [];
 
-    constructor(index, timestamp, hash, previousHash, data, difficulty, nonce) {
-        this.index = index;
-        this.timestamp = timestamp;
-        this.hash = hash;
-        this.previousHash = previousHash;
-        this.data = data;
-        this.difficulty = difficulty;
-        this.nonce = nonce;
-    }
-}
-
+//done
 exports.generateGenesisBlock = (req, res) => {
     block.find()
         .then(data => {
             if (data.length == 0) {
                 const index = 0;
                 const timestamp = new Date().getTime();
-                const data = 'Genesis Block';
+                const data = new Transaction('Genesis_Block');
                 const previousHash = '0';
                 const difficulty = 1
                 const nonce = 0
@@ -52,9 +49,8 @@ exports.generateGenesisBlock = (req, res) => {
         });
 };
 
-//req = block data
+//done
 exports.generateNextBlock = (req, res) => {
-
     block.find().sort({ 'index': -1 })
         .then(data => {
             //check generate GenesisBlock is not
@@ -62,25 +58,63 @@ exports.generateNextBlock = (req, res) => {
                 const previousBlock = new block(data[0]);
                 const nextIndex = previousBlock.index + 1;
                 const nextTimeStamp = new Date().getTime()
-                const block_data = (typeof(req.query.data) != "undefined" && req.query.data !== null) ? req.query.data : "";
+                const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), nextIndex);
+                const block_data = coinbaseTx;
                 const difficulty = getDifficulty(previousBlock, data);
                 const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
+                unspentTxOutSchema.find().then(unspentTxOuts_data => {
+                    if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
 
-                if (isValidNewBlock(newblock, previousBlock) === true) {
-                    newblock.save().then(data => {
-                        res.send(data);
-                    }).catch(err => {
-                        res.status(500).send({
-                            message: err.message || "Some error occurred while generate a new Block."
+                        newblock.save().then(data => {
+                            res.send(data);
                         });
-                    });
-                }
 
+                    }
+                })
             } else {
-                res.send({ message: "There is not any blockdata. Please generate GenesisBlock" })
+                res.send({ message: "Please generate GenesisBlcok" })
             }
         });
 }
+
+//done
+exports.generatenextBlockWithTransaction = (req, res) => {
+    block.find().sort({ 'index': -1 })
+        .then(data => {
+            //check generate GenesisBlock is not
+            if (data !== null && typeof(data) != "undefined" && data.length !== 0) {
+
+                const previousBlock = new block(data[0]);
+                const nextIndex = previousBlock.index + 1;
+                const nextTimeStamp = new Date().getTime()
+
+                receiverAddress = "receiverAddress"
+                amount = 50
+                const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), nextIndex);
+
+                unspentTxOutSchema.find().then(unspentTxOuts_data => {
+                    const tx = transaction.createTransaction(receiverAddress, amount, wallet.getPrivateFromWallet_return(), unspentTxOuts_data);
+
+                    // const block_data = new Transaction([coinbaseTx, tx]);
+                    const block_data = new Transaction(
+                        tx.id,
+                        tx.txIns,
+                        tx.txOuts
+                    );
+                    const difficulty = getDifficulty(previousBlock, data);
+                    const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
+                    if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
+                        newblock.save().then(data => {
+                            res.send(data);
+                        });
+                    }
+                })
+            } else {
+                res.send({ message: "Please generate GenesisBlcok" })
+            }
+        });
+}
+
 
 //get all block data
 exports.getAllBlockData = (req, res) => {
@@ -103,6 +137,33 @@ exports.getLastestBlock = (req, res) => {
                 message: err.message || "Some error occurred while retrieving block data."
             });
         });
+}
+
+//done
+function addBlockToChain(newBlock, previousBlock, unspentTxOuts_data) {
+    if (isValidNewBlock(newBlock, previousBlock)) {
+
+        const retVal = transaction.processTransactions(newBlock.data, unspentTxOuts_data, newBlock.index);
+        if (retVal === null) {
+            return false;
+        } else {
+            //unspentTxOuts = retVal;
+            unspentTxOuts_mongo = new unspentTxOutSchema({
+                txOutId: retVal[0].txOutId,
+                // txOutIndex: retVal[0].txOutIndex,
+                txOutIndex: newBlock.index,
+                address: retVal[0].address,
+                amount: retVal[0].amount,
+            });
+
+            unspentTxOuts_mongo.save();
+
+            unspentTxOuts = retVal;
+
+            return true;
+        }
+    }
+    return false;
 }
 
 function getDifficulty(previousBlock, allBlockData) {
@@ -179,10 +240,11 @@ function isValidNewBlock(newBlock, previousBlock) {
         return false
     }
 
-    if (newBlock.hash !== calculateHash(newBlock.index, newBlock.previousHash, newBlock.timestamp, newBlock.data, newBlock.difficulty, newBlock.nonce)) {
-        console.log("invalid hash")
-        return false
-    }
+    // if (newBlock.hash !== calculateHash(newBlock.index, newBlock.previousHash, newBlock.timestamp, newBlock.data, newBlock.difficulty, newBlock.nonce)) {
+    //     // console.log(calculateHash(newBlock.index, newBlock.previousHash, newBlock.timestamp, newBlock.data, newBlock.difficulty, newBlock.nonce))
+    //     // console.log(newBlock)
+    //     return false
+    // }
 
     return true;
 }
