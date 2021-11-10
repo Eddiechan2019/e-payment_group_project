@@ -13,19 +13,6 @@ const DIFFICULTY_ADJUSTMENT_INTERVAL = 10;
 
 let unspentTxOuts = [];
 
-class Block {
-
-    constructor(index, timestamp, hash, previousHash, data, difficulty, nonce) {
-        this.index = index;
-        this.timestamp = timestamp;
-        this.hash = hash;
-        this.previousHash = previousHash;
-        this.data = data;
-        this.difficulty = difficulty;
-        this.nonce = nonce;
-    }
-}
-
 //done
 exports.generateGenesisBlock = (req, res) => {
     block.find()
@@ -33,7 +20,7 @@ exports.generateGenesisBlock = (req, res) => {
             if (data.length == 0) {
                 const index = 0;
                 const timestamp = new Date().getTime();
-                const data = 'Genesis Block';
+                const data = new Transaction('Genesis_Block');
                 const previousHash = '0';
                 const difficulty = 1
                 const nonce = 0
@@ -62,34 +49,6 @@ exports.generateGenesisBlock = (req, res) => {
         });
 };
 
-//will delete
-exports.generateRawNextBlock = function(blockData) {
-    block.find().sort({ 'index': -1 })
-        .then(data => {
-            //check generate GenesisBlock is not
-            if (data !== null && typeof(data) != "undefined" && data.length !== 0) {
-                const previousBlock = new block(data[0]);
-                const nextIndex = previousBlock.index + 1;
-                const nextTimeStamp = new Date().getTime()
-                const block_data = (typeof(blockData) != "undefined" && blockData !== null) ? blockData : "";
-                const difficulty = getDifficulty(previousBlock, data);
-                const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
-
-                if (isValidNewBlock(newblock, previousBlock) === true) {
-                    newblock.save().then(data => {
-                        return data;
-                    }).catch(err => {
-                        return err || "Some error occurred while generate a new Block."
-                    });
-                }
-
-            } else {
-                res.send({ message: "There is not any blockdata. Please generate GenesisBlock" })
-            }
-        });
-
-}
-
 //done
 exports.generateNextBlock = (req, res) => {
     block.find().sort({ 'index': -1 })
@@ -103,17 +62,22 @@ exports.generateNextBlock = (req, res) => {
                 const block_data = coinbaseTx;
                 const difficulty = getDifficulty(previousBlock, data);
                 const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
-                if (addBlockToChain(newblock, previousBlock)) {
+                unspentTxOutSchema.find().then(unspentTxOuts_data => {
+                    if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
 
-                    newblock.save().then(data => {
-                        res.send(data);
-                    });
+                        newblock.save().then(data => {
+                            res.send(data);
+                        });
 
-                }
+                    }
+                })
+            } else {
+                res.send({ message: "Please generate GenesisBlcok" })
             }
         });
 }
 
+//done
 exports.generatenextBlockWithTransaction = (req, res) => {
     block.find().sort({ 'index': -1 })
         .then(data => {
@@ -128,26 +92,25 @@ exports.generatenextBlockWithTransaction = (req, res) => {
                 amount = 50
                 const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), nextIndex);
 
-                unspentTxOuts = unspentTxOutSchema.find().then(unspentTxOuts_data => {
+                unspentTxOutSchema.find().then(unspentTxOuts_data => {
                     const tx = transaction.createTransaction(receiverAddress, amount, wallet.getPrivateFromWallet_return(), unspentTxOuts_data);
 
                     // const block_data = new Transaction([coinbaseTx, tx]);
-                    const block_data = new Transaction({
-                        id: tx.id,
-
-                        txIns: tx.txIns,
-                        txOuts: tx.txOuts
-                    });
+                    const block_data = new Transaction(
+                        tx.id,
+                        tx.txIns,
+                        tx.txOuts
+                    );
                     const difficulty = getDifficulty(previousBlock, data);
                     const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
-                        //res.send(tx.id);
-                    if (addBlockToChain(newblock, previousBlock)) {
+                    if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
                         newblock.save().then(data => {
                             res.send(data);
                         });
                     }
                 })
-
+            } else {
+                res.send({ message: "Please generate GenesisBlcok" })
             }
         });
 }
@@ -177,10 +140,10 @@ exports.getLastestBlock = (req, res) => {
 }
 
 //done
-function addBlockToChain(newBlock, previousBlock) {
+function addBlockToChain(newBlock, previousBlock, unspentTxOuts_data) {
     if (isValidNewBlock(newBlock, previousBlock)) {
 
-        const retVal = transaction.processTransactions(newBlock.data, unspentTxOuts, newBlock.index);
+        const retVal = transaction.processTransactions(newBlock.data, unspentTxOuts_data, newBlock.index);
         if (retVal === null) {
             return false;
         } else {

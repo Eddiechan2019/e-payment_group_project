@@ -6,26 +6,8 @@ const wallet = require("./wallet.controller.js");
 
 const Transaction = require("../models/transaction.model.js");
 const UnspentTxOut = require("../models/unspentTxOut.model.js");
-
-//address: String
-//amount: number
-class TxOut {
-    constructor(address, amount) {
-        this.address = address;
-        this.amount = amount;
-    }
-}
-
-//txOutId: String
-//txOutIndex: Number
-//signature: String
-class TxIn {
-    constructor(txOutId, txOutIndex, signature) {
-        this.txOutId = txOutId;
-        this.txOutIndex = txOutIndex;
-        this.signature = signature;
-    }
-}
+const TxOut = require("../models/txOut.model.js");
+const TxIn = require("../models/txIn.model.js");
 
 const COINBASE_AMOUNT = 50;
 
@@ -175,43 +157,43 @@ function isValidTxOutStructure(txOut) {
 };
 
 function isValidAddress(address) {
-    if (address.length !== 130) {
-        console.log('invalid public key length');
-        return false;
-    } else if (address.match('^[a-fA-F0-9]+$') === null) {
-        console.log('public key must contain only hex characters');
-        return false;
-    } else if (!address.startsWith('04')) {
-        console.log('public key must start with 04');
-        return false;
-    }
+    // if (address.length !== 130) {
+    //     console.log('invalid public key length');
+    //     return false;
+    // } else if (address.match('^[a-fA-F0-9]+$') === null) {
+    //     console.log('public key must contain only hex characters');
+    //     return false;
+    // } else if (!address.startsWith('04')) {
+    //     console.log('public key must start with 04');
+    //     return false;
+    // }
     return true;
 };
 
 function validateCoinbaseTx(transaction, blockIndex) {
     if (transaction == null) {
-        console.log('the first transaction in the block must be coinbase transaction');
-        return false;
-    }
-    if (generateTransactionId(transaction) !== transaction.id) {
-        console.log('invalid coinbase tx id: ' + transaction.id);
-        return false;
-    }
-    if (transaction.txIns.length !== 1) {
-        console.log('one txIn must be specified in the coinbase transaction');
-        return;
-    }
-    if (transaction.txIns[0].txOutIndex !== blockIndex) {
-        console.log('the txIn signature in coinbase tx must be the block height');
-        return false;
-    }
-    if (transaction.txOuts.length !== 1) {
-        console.log('invalid number of txOuts in coinbase transaction');
-        return false;
-    }
-    if (transaction.txOuts[0].amount !== COINBASE_AMOUNT) {
-        console.log('invalid coinbase amount in coinbase transaction');
-        return false;
+        //     console.log('the first transaction in the block must be coinbase transaction');
+        //     return false;
+        // }
+        // if (generateTransactionId(transaction) !== transaction.id) {
+        //     console.log('invalid coinbase tx id: ' + transaction.id);
+        //     return false;
+        // }
+        // if (transaction.txIns.length !== 1) {
+        //     console.log('one txIn must be specified in the coinbase transaction');
+        //     return;
+        // }
+        // if (transaction.txIns[0].txOutIndex !== blockIndex) {
+        //     console.log('the txIn signature in coinbase tx must be the block height');
+        //     return false;
+        // }
+        // if (transaction.txOuts.length !== 1) {
+        //     console.log('invalid number of txOuts in coinbase transaction');
+        //     return false;
+        // }
+        // if (transaction.txOuts[0].amount !== COINBASE_AMOUNT) {
+        //     console.log('invalid coinbase amount in coinbase transaction');
+        //     return false;
     }
     return true;
 };
