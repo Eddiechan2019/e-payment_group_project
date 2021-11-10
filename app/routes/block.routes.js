@@ -20,10 +20,11 @@ module.exports = (app) => {
 
     app.get('/generateGenesisBlock', block.generateGenesisBlock);
     app.get('/generateNextBlock', block.generateNextBlock);
-    app.get('/getAllBlockData', block.getAllBlockData);
-    app.get('/getLastestBlock', block.getLastestBlock);
     app.get('/generatenextBlockWithTransaction', block.generatenextBlockWithTransaction);
 
+
+    app.get('/getAllBlockData', block.getAllBlockData);
+    app.get('/getLastestBlock', block.getLastestBlock);
 
     app.get('/test', transaction.getCoinbaseTransaction);
 }
