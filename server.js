@@ -1,6 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 
+const p2p = require("./app/controllers/p2p.controller.js");
+
+//init the p2p server
+p2p.initP2Pserver();
+
 // create express app
 const app = express();
 
@@ -28,11 +33,12 @@ mongoose.connect(dbConfig.url, {
 
 // define a simple route
 app.get('/', (req, res) => {
-    res.json({ "message": "Welcome to EasyNotes application. Take notes quickly. Organize and keep track of all your notes." });
+    res.json({ "message": "Welcome to COMP4142 E-Payment and Cryptocurrency, Group Project" });
 });
 
 require('./app/routes/block.routes.js')(app);
 require('./app/routes/wallet.routes.js')(app);
+require('./app/routes/p2p.routes.js')(app);
 
 // listen for requests
 app.listen(3000, () => {
