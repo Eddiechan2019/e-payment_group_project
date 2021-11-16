@@ -82,13 +82,6 @@ exports.createTransaction = function(receiverAddress, amount, privateKey, unspen
     const myUnspentTxOuts = unspentTxOuts.filter((uTxO) => uTxO.address === myAddress);
     const { includedUnspentTxOuts, leftOverAmount } = findTxOutsForAmount(amount, myUnspentTxOuts);
 
-    // function toUnsignedTxIn(unspentTxOut) {
-    //     const txIn = new TxIn();
-    //     txIn.txOutId = unspentTxOut.txOutId;
-    //     txIn.txOutIndex = "test";
-    //     return txIn;
-    // }
-
     const toUnsignedTxIn = (unspentTxOuts) => {
         const txIn = new TxIn();
         txIn.txOutId = unspentTxOuts.txOutId;
@@ -121,16 +114,19 @@ function createTxOuts(receiverAddress, myAddress, amount, leftOverAmount) {
     }
 }
 
+//check the user has enough coins to send transaction or not
 function findTxOutsForAmount(amount, myUnspentTxOuts) {
     let currentAmount = 0;
     const includedUnspentTxOuts = [];
 
     for (const myUnspentTxOut of myUnspentTxOuts) {
-        includedUnspentTxOuts.push(myUnspentTxOut);
-        currentAmount = currentAmount + myUnspentTxOut.amount;
-        if (currentAmount >= amount) {
-            const leftOverAmount = currentAmount - amount;
-            return { includedUnspentTxOuts, leftOverAmount }
+        if (myUnspentTxOut.address == wallet.getPublicFromWallet_return()) {
+            includedUnspentTxOuts.push(myUnspentTxOut);
+            currentAmount = currentAmount + myUnspentTxOut.amount;
+            if (currentAmount >= amount) {
+                const leftOverAmount = currentAmount - amount;
+                return { includedUnspentTxOuts, leftOverAmount }
+            }
         }
     }
     throw Error('not enough coins to send transaction');

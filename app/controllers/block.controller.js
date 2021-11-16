@@ -58,7 +58,7 @@ exports.generateNextBlock = (req, res) => {
                 const previousBlock = new block(data[0]);
                 const nextIndex = previousBlock.index + 1;
                 const nextTimeStamp = new Date().getTime()
-                const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), nextIndex);
+                const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), 0);
                 const block_data = coinbaseTx;
                 const difficulty = getDifficulty(previousBlock, data);
                 const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
@@ -88,9 +88,10 @@ exports.generatenextBlockWithTransaction = (req, res) => {
                 const nextIndex = previousBlock.index + 1;
                 const nextTimeStamp = new Date().getTime()
 
-                receiverAddress = "receiverAddress"
-                amount = 50
-                const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), nextIndex);
+                const receiverAddress = req.body.address;
+                const amount = req.body.amount;
+
+                //const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), nextIndex);
 
                 unspentTxOutSchema.find().then(unspentTxOuts_data => {
                     const tx = transaction.createTransaction(receiverAddress, amount, wallet.getPrivateFromWallet_return(), unspentTxOuts_data);
@@ -147,16 +148,28 @@ function addBlockToChain(newBlock, previousBlock, unspentTxOuts_data) {
         if (retVal === null) {
             return false;
         } else {
-            //unspentTxOuts = retVal;
-            unspentTxOuts_mongo = new unspentTxOutSchema({
-                txOutId: retVal[0].txOutId,
-                // txOutIndex: retVal[0].txOutIndex,
-                txOutIndex: newBlock.index,
-                address: retVal[0].address,
-                amount: retVal[0].amount,
-            });
 
-            unspentTxOuts_mongo.save();
+            for (let j = 0; j < unspentTxOuts_data.length; j++) {
+                unspentTxOutSchema.findByIdAndRemove(unspentTxOuts_data[j]._id)
+                    .then(transaciton => {
+                        if (!transaciton) {
+                            console.log("unspent Transaction not found with id " + unspentTxOuts_data[j]._id)
+                            return false;
+                        }
+                    })
+
+            }
+
+            for (let i = 0; i < retVal.length; i++) {
+                unspentTxOuts_mongo = new unspentTxOutSchema({
+                    txOutId: retVal[i].txOutId,
+                    txOutIndex: retVal[i].txOutIndex,
+                    address: retVal[i].address,
+                    amount: retVal[i].amount,
+                });
+
+                unspentTxOuts_mongo.save();
+            }
 
             unspentTxOuts = retVal;
 

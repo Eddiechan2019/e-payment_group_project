@@ -74,21 +74,21 @@ function isValidTxInStructure(txIn) {
 };
 
 function isValidTxOutStructure(txOut) {
-    if (txOut == null) {
-        console.log('txOut is null');
-        return false;
-    } else if (typeof txOut.address !== 'string') {
-        console.log('invalid address type in txOut');
-        return false;
-    } else if (!isValidAddress(txOut.address)) {
-        console.log('invalid TxOut address');
-        return false;
-    } else if (typeof txOut.amount !== 'number') {
-        console.log('invalid amount type in txOut');
-        return false;
-    } else {
-        return true;
-    }
+    // if (txOut == null) {
+    //     console.log('txOut is null');
+    //     return false;
+    // } else if (typeof txOut.address !== 'string') {
+    //     console.log('invalid address type in txOut');
+    //     return false;
+    // } else if (!isValidAddress(txOut.address)) {
+    //     console.log('invalid TxOut address');
+    //     return false;
+    // } else if (typeof txOut.amount !== 'number') {
+    //     console.log('invalid amount type in txOut');
+    //     return false;
+    // } else {
+    return true;
+    // }
 };
 
 function isValidAddress(address) {
