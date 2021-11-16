@@ -16,13 +16,13 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
 
 // Configuring the database
-const dbConfig = require('./config/database.config.js');
+const Config = require('./config/config.js');
 const mongoose = require('mongoose');
 
 mongoose.Promise = global.Promise;
 
 // Connecting to the database
-mongoose.connect(dbConfig.url, {
+mongoose.connect(Config.url, {
     useNewUrlParser: true
 }).then(() => {
     console.log("Successfully connected to the database");
@@ -41,6 +41,6 @@ require('./app/routes/wallet.routes.js')(app);
 require('./app/routes/p2p.routes.js')(app);
 
 // listen for requests
-app.listen(3000, () => {
-    console.log("Server is listening on port 3000");
+app.listen(Config.express_port, () => {
+    console.log("Server is listening on port " + Config.express_port);
 });

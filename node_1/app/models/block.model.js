@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Config = require('../../config/config.js');
 
 const Transaction = mongoose.Schema({
     id: String,
@@ -17,4 +18,4 @@ const blockSchema = mongoose.Schema({
     nonce: Number
 });
 
-module.exports = mongoose.model('block', blockSchema);
+module.exports = mongoose.model(Config.express_port + '_' + 'block', blockSchema);

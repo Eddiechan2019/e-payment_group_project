@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Config = require('../../config/config.js');
 
 const unspentTxOutSchema = mongoose.Schema({
     txOutId: String,
@@ -7,4 +8,4 @@ const unspentTxOutSchema = mongoose.Schema({
     amount: Number,
 });
 
-module.exports = mongoose.model('unspentTxOut', unspentTxOutSchema);
+module.exports = mongoose.model(Config.express_port + '_' + 'unspentTxOut', unspentTxOutSchema);

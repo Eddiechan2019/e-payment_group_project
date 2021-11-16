@@ -1,8 +1,9 @@
 const WebSocket = require('ws');
 const WebSocketServer = require('ws').Server;
 const url = require('url')
+const Config = require('../../config/config.js');
 
-const p2p_port = 8000;
+const p2p_port = Config.p2p_port;
 
 ws_server = new WebSocketServer({ port: p2p_port });
 
