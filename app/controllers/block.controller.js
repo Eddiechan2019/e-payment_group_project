@@ -6,6 +6,7 @@ const wallet = require("./wallet.controller.js");
 
 const Transaction = require("../models/transaction.model.js");
 const UnspentTxOut = require("../models/unspentTxOut.model.js");
+const Transaction_pool = require("../models/transaction_pool.model.js")
 const unspentTxOutSchema = require("../models/unspentTxOut_mongo.model.js");
 
 const BLOCK_GENERATION_INTERVAL = 10;
@@ -61,16 +62,28 @@ exports.generateNextBlock = (req, res) => {
                 const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), 0);
                 const block_data = coinbaseTx;
                 const difficulty = getDifficulty(previousBlock, data);
-                const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
-                unspentTxOutSchema.find().then(unspentTxOuts_data => {
-                    if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
 
-                        newblock.save().then(data => {
-                            res.send(data);
-                        });
+                const transaction_pool = new Transaction_pool({
+                    id: block_data.id,
+                    txIns: block_data.txIns,
+                    txOuts: block_data.txOuts,
+                });
 
-                    }
+                transaction_pool.save().then(data => {
+                    res.send(data);
                 })
+
+                // const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
+                // unspentTxOutSchema.find().then(unspentTxOuts_data => {
+                //     if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
+
+                //         newblock.save().then(data => {
+                //             res.send(data);
+                //         });
+
+                //     }
+                // })
+
             } else {
                 res.send({ message: "Please generate GenesisBlcok" })
             }
@@ -103,12 +116,24 @@ exports.generatenextBlockWithTransaction = (req, res) => {
                         tx.txOuts
                     );
                     const difficulty = getDifficulty(previousBlock, data);
-                    const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
-                    if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
-                        newblock.save().then(data => {
+
+
+                    //save the transaction into transaction pool
+                    const transaction_pool = new Transaction_pool({
+                        id: block_data.id,
+                        txIns: block_data.txIns,
+                        txOuts: block_data.txOuts,
+                    });
+
+                    transaction_pool.save().then(data => {
                             res.send(data);
-                        });
-                    }
+                        })
+                        // const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
+                        // if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
+                        //     newblock.save().then(data => {
+                        //         res.send(data);
+                        //     });
+                        // }
                 })
             } else {
                 res.send({ message: "Please generate GenesisBlcok" })
