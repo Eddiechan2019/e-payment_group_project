@@ -6,7 +6,7 @@ const wallet = require("./wallet.controller.js");
 
 const Transaction = require("../models/transaction.model.js");
 const UnspentTxOut = require("../models/unspentTxOut.model.js");
-const Transaction_pool = require("../models/transaction_pool.model.js")
+const Transaction_pool = require("../models/transaction_pool.model.js");
 const unspentTxOutSchema = require("../models/unspentTxOut_mongo.model.js");
 
 const BLOCK_GENERATION_INTERVAL = 10;

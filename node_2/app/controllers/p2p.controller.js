@@ -1,74 +1,138 @@
 const WebSocket = require('ws');
 const WebSocketServer = require('ws').Server;
+
 const url = require('url')
 const Config = require('../../config/config.js');
+const wallet = require("./wallet.controller.js");
 
-const p2p_port = Config.p2p_port;
+const Message = require("../models/p2p_message.model.js");
+const Transaction_pool = require("../models/transaction_pool.model.js")
+const block = require('../models/block.model.js');
 
-ws_server = new WebSocketServer({ port: p2p_port });
+const p2p_port = 8000;
+
+// ws_server = new WebSocket({ port: p2p_port });
+const public_key = wallet.getPublicFromWallet_return();
+const ws = new WebSocket("ws://localhost:" + p2p_port + "/" + public_key, 'echo-protocol');
 
 //how many user on the p2p network
 const index = ['0'];
 // store the message
 const wsArray = {};
 
-exports.connecToPeers = (req, res) => {
-    const ws = new WebSocket("ws://localhost:" + p2p_port + "/" + req.body.peer);
+ws.onopen = function() {
+    console.log('network port = ' + p2p_port);
+    console.log('Connected to blockchain p2p');
+};
 
-    ws.on('open', () => {
-        res.send({ message: "Welcome to my p2p network" })
-        console.log(req.body.peer + ' joined the room');
-    });
+ws.onmessage = function(received_data) {
+    message = JSON.parse(received_data.data);
 
-    ws.on('error', () => {
-        console.log('connection failed');
-    });
+    if (typeof message.type !== 'undefined') {
+        switch (message.type) {
 
+            //receive the blockchain data
+            case "MessageType.RESPONSE_BLOCKCHAIN":
+                const receivedBlockData = message.data;
+                if (receivedBlockData === null) {
+                    console.log('invalid blockchain data received: %s', JSON.stringify(message.data));
+                    break;
+                }
+
+                //update blockchain data in user database
+                block.find().then(block_data => {
+                    for (let i = 0; i < receivedBlockData.length; i++) {
+                        for (let j = 0; j < block_data.length; j++) {
+
+                            if ((block_data[j].index != receivedBlockData[i].index) &&
+                                (block_data[j].txIns != receivedBlockData[i].txIns) &&
+                                (block_data[j].txOuts != receivedBlockData[i].txOuts)) {
+
+                                const new_block = new block({
+                                    index: receivedBlockData[i].index,
+                                    hash: receivedBlockData[i].hash,
+                                    previousHash: receivedBlockData[i].previousHash,
+                                    timestamp: receivedBlockData[i].timestamp,
+                                    data: receivedBlockData[i].data,
+                                    difficulty: receivedBlockData[i].difficulty,
+                                    nonce: receivedBlockData[i].nonce
+                                });
+
+                                new_block.save().then(data => {
+                                    console.log("Blockchian Updated");
+                                })
+
+                            } else {
+                                console.log("Blockchian data already up to date.")
+                            }
+                        }
+                    }
+                })
+
+                //receive the transaction pool data
+            case "MessageType.RESPONSE_TRANSACTION_POOL":
+                const receivedTransactions = message.data;
+                if (receivedTransactions === null) {
+                    console.log('invalid transaction received: %s', JSON.stringify(message.data));
+                    break;
+                }
+
+                //update transaction pool data in user database
+                Transaction_pool.find().then(transacton_pool_data => {
+                    for (let i = 0; i < receivedTransactions.length; i++) {
+                        for (let j = 0; j < transacton_pool_data.length; j++) {
+
+                            if ((transacton_pool_data[j].id != receivedTransactions[i].id) &&
+                                (transacton_pool_data[j].txIns != receivedTransactions[i].txIns) &&
+                                (transacton_pool_data[j].txOuts != receivedTransactions[i].txOuts)) {
+
+                                const transaction_pool = new Transaction_pool({
+                                    id: receivedTransactions[i].id,
+                                    txIns: receivedTransactions[i].txIns,
+                                    txOuts: receivedTransactions[i].txOuts,
+                                });
+
+                                transaction_pool.save().then(data => {
+                                    console.log("Transaction Pool Updated");
+                                })
+
+                            } else {
+                                console.log("Transaction Pool data already up to date.")
+                            }
+                        }
+                    }
+                })
+        }
+
+    } else {
+        console.log("Message received = " + received_data.data);
+    }
+};
+
+ws.onclose = function() {
+    // websocket is closed.
+    console.log("Connection closed...");
+};
+
+exports.broadCastTransactionPool = (req, res) => {
+    const responseTransactionPoolMsg = new Message;
+    responseTransactionPoolMsg.type = "MessageType.RESPONSE_TRANSACTION_POOL"
+
+    Transaction_pool.find().then(data => {
+        responseTransactionPoolMsg.data = data;
+
+        broadcast(JSON.stringify(responseTransactionPoolMsg));
+
+        res.send("broaded");
+    })
 }
 
-exports.initP2Pserver = function() {
-    ws_server.on('connection', function(ws, req) {
-        //get the user name
-        const location = url.parse(req.url);
-        const name = location.path.substring(1);
-
-        ws.send(name + ' Hello!');
-
-        //output who join the network
-        const time = new Date();
-        for (var i = 1; i <= index.length - 1; i++) {
-            if (i != ws.id) {
-                wsArray[i].send(name + ' joined the room at: ' + time.toLocaleDateString());
-            }
+function broadcast(send_msg) {
+    for (var i = 1; i <= index.length - 1; i++) {
+        if (i != ws.id) {
+            wsArray[i].send(send_msg);
         }
-
-        for (var i = 0; i <= index.length; i++) {
-            if (!index[i]) {
-                index[i] = i; //the number of user
-                ws.id = i;
-                ws.name = name;
-                wsArray[ws.id] = ws;
-                break;
-            }
-        }
-
-        //message between uesr
-        ws.on('message', function(mes) {
-            for (var i = 1; i <= index.length - 1; i++) {
-                if (i != ws.id) {
-                    wsArray[i].send(ws.name + ':' + mes);
-                }
-            }
-        })
-
-        ws.on('close', function() {
-            for (var i = 1; i <= index.length - 1; i++) {
-                if (i != ws.id) {
-                    wsArray[i].send(ws.name + ' is disconnected!')
-                }
-            }
-        })
-    })
+    }
 }
 
 exports.getP2PList = (req, res) => {
