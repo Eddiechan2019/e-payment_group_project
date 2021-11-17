@@ -5,4 +5,5 @@ module.exports = (app) => {
     app.get('/getP2PList', p2p.getP2PList)
 
     app.get('/broadCastTransactionPool', p2p.broadCastTransactionPool)
+    app.get('/broadCastBlockchain', p2p.broadCastBlockchain)
 }

@@ -92,16 +92,93 @@ function initMessageHandler(ws) {
             }
 
             if (typeof message.type !== 'undefined') {
-                switch (message.type) {
-                    //receive the transaction pool data
-                    case MessageType.RESPONSE_TRANSACTION_POOL:
-                        const receivedTransactions = message.data;
-                        if (receivedTransactions === null) {
-                            console.log('invalid transaction received: %s', JSON.stringify(message.data));
-                            break;
-                        }
+                //receive the blockchain data
+                if (message.type == "MessageType.RESPONSE_BLOCKCHAIN") {
+                    const receivedBlockData = message.data;
+                    if (receivedBlockData === null) {
+                        console.log('invalid blockchain data received: %s', JSON.stringify(message.data));
+                    } else {
 
-                        //console.log(receivedTransactions);
+                        //update blockchain data in user database
+                        block.find().then(block_data => {
+
+                            if (block_data > receivedBlockData.length) {
+                                console.log("Blockchian data already up to date.")
+                            } else {
+
+                                for (let i = block_data.length; i < receivedBlockData.length; i++) {
+
+                                    const new_block = new block({
+                                        index: receivedBlockData[i].index,
+                                        hash: receivedBlockData[i].hash,
+                                        previousHash: receivedBlockData[i].previousHash,
+                                        timestamp: receivedBlockData[i].timestamp,
+                                        data: receivedBlockData[i].data,
+                                        difficulty: receivedBlockData[i].difficulty,
+                                        nonce: receivedBlockData[i].nonce
+                                    });
+                                    new_block.save().then(data => {
+                                        console.log("Blockchian Updated");
+                                    })
+                                }
+                            }
+
+                        })
+                    }
+                }
+
+                //receive the transaction pool data
+                if (message.type == "MessageType.RESPONSE_TRANSACTION_POOL") {
+                    const receivedTransactions = message.data;
+                    if (receivedTransactions === null) {
+                        console.log('invalid transaction received: %s', JSON.stringify(message.data));
+                    } else {
+                        //update transaction pool data in user database
+                        Transaction_pool.find().then(transacton_pool_data => {
+
+                            var in_db_time = 0
+                            for (let i = 0; i < receivedTransactions.length; i++) {
+
+                                var in_db = false;
+                                //check the receviedTransaction is in db or not
+                                for (let j = 0; j < transacton_pool_data.length; j++) {
+
+                                    //check role
+                                    if (transacton_pool_data[j].id == receivedTransactions[i].id) {
+                                        if ((transacton_pool_data[j].txIns.txOutId == receivedTransactions[i].txIns.txOutId) &&
+                                            (transacton_pool_data[j].txIns.txOutIndex == receivedTransactions[i].txIns.txOutIndex) &&
+                                            (transacton_pool_data[j].txIns.signature == receivedTransactions[i].txIns.signature)) {
+                                            if ((transacton_pool_data[j].txOuts.address == receivedTransactions[i].txOuts.address) &&
+                                                (transacton_pool_data[j].txOuts.amount == receivedTransactions[i].txOuts.amount)) {
+                                                in_db = true;
+                                                in_db_time = in_db_time + 1;
+                                            }
+                                        }
+                                    }
+
+                                }
+
+
+                                if (in_db == false) {
+                                    const transaction_pool = new Transaction_pool({
+                                        id: receivedTransactions[i].id,
+                                        txIns: receivedTransactions[i].txIns,
+                                        txOuts: receivedTransactions[i].txOuts,
+                                    });
+
+                                    transaction_pool.save().then(data => {})
+                                }
+
+                            }
+
+                            if (in_db_time == receivedTransactions.length) {
+                                console.log("Transaction Pool data already up to date.");
+                            } else {
+                                console.log("Transaction Pool Updated");
+                            }
+
+                        })
+                    }
                 }
             }
         } catch (e) {
