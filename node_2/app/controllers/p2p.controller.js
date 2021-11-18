@@ -21,8 +21,7 @@ const index = ['0'];
 const wsArray = {};
 
 ws.onopen = function() {
-    console.log('network port = ' + p2p_port);
-    console.log('Connected to blockchain p2p');
+    console.log('Connected to blockchain p2p' + ' Network Port = ' + p2p_port);
 };
 
 ws.onmessage = function(received_data) {
@@ -80,7 +79,7 @@ ws.onmessage = function(received_data) {
                         var in_db = false;
                         //check the receviedTransaction is in db or not
                         for (let j = 0; j < transacton_pool_data.length; j++) {
-
+                            in_db = false;
                             //check role
                             if (transacton_pool_data[j].id == receivedTransactions[i].id) {
                                 if ((transacton_pool_data[j].txIns.txOutId == receivedTransactions[i].txIns.txOutId) &&
@@ -130,25 +129,34 @@ ws.onclose = function() {
     console.log("Connection closed...");
 };
 
-exports.broadCastTransactionPool = (req, res) => {
+exports.broadCastBlockchain = function() {
+    const responseBlockchain = new Message;
+
+    block.find().then(data => {
+        responseBlockchain.type = "MessageType.RESPONSE_BLOCKCHAIN"
+        responseBlockchain.data = data;
+
+        broadcast(JSON.stringify(responseBlockchain));
+
+        console.log("Blockchain data is broaded")
+    })
+}
+
+exports.broadCastTransactionPool = function() {
     const responseTransactionPoolMsg = new Message;
-    responseTransactionPoolMsg.type = "MessageType.RESPONSE_TRANSACTION_POOL"
 
     Transaction_pool.find().then(data => {
+        responseTransactionPoolMsg.type = "MessageType.RESPONSE_TRANSACTION_POOL"
         responseTransactionPoolMsg.data = data;
 
         broadcast(JSON.stringify(responseTransactionPoolMsg));
 
-        res.send("broaded");
+        console.log("Transaction Pool data is broaded")
     })
 }
 
 function broadcast(send_msg) {
-    for (var i = 1; i <= index.length - 1; i++) {
-        if (i != ws.id) {
-            wsArray[i].send(send_msg);
-        }
-    }
+    ws.send(send_msg);
 }
 
 exports.getP2PList = (req, res) => {

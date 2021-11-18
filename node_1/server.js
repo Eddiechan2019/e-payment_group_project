@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 const p2p = require("./app/controllers/p2p.controller.js");
+const block = require('./app/controllers/block.controller.js');
 
 //init the p2p server
 p2p.initP2Pserver();
@@ -43,4 +44,6 @@ require('./app/routes/p2p.routes.js')(app);
 // listen for requests
 app.listen(Config.express_port, () => {
     console.log("Server is listening on port " + Config.express_port);
+
+    block.generateGenesisBlock();
 });

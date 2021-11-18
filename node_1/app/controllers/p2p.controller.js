@@ -17,21 +17,6 @@ const index = ['0'];
 // store the message
 const wsArray = {};
 
-exports.connecToPeers = (req, res) => {
-    const public_key = wallet.getPublicFromWallet_return();
-    const ws = new WebSocket("ws://localhost:" + p2p_port + "/" + public_key);
-
-    ws.on('open', () => {
-        res.send({ message: "Welcome to my p2p network" })
-        console.log(public_key + ' joined the room');
-    });
-
-    ws.on('error', () => {
-        console.log('connection failed');
-    });
-
-}
-
 exports.initP2Pserver = function() {
     ws_server.on('connection', function(ws, req) {
         //get the user name
@@ -76,13 +61,14 @@ function initMessageHandler(ws) {
     ws.on('message', function(data) {
         try {
             // const message = JSON.parse(data);
-            message = data
+            message = JSON.parse(data);
+
             if (message === null) {
                 console.log('could not parse received JSON message: ' + data);
                 return;
             }
 
-            console.log('Received message: %s', message);
+            //console.log('Received message: %s', message);
 
             // message between uesr
             for (var i = 1; i <= index.length - 1; i++) {
@@ -142,7 +128,7 @@ function initMessageHandler(ws) {
                                 var in_db = false;
                                 //check the receviedTransaction is in db or not
                                 for (let j = 0; j < transacton_pool_data.length; j++) {
-
+                                    in_db = false;
                                     //check role
                                     if (transacton_pool_data[j].id == receivedTransactions[i].id) {
                                         if ((transacton_pool_data[j].txIns.txOutId == receivedTransactions[i].txIns.txOutId) &&
@@ -187,7 +173,7 @@ function initMessageHandler(ws) {
     })
 }
 
-exports.broadCastBlockchain = (req, res) => {
+exports.broadCastBlockchain = function() {
     const responseBlockchain = new Message;
     block.find().then(data => {
         responseBlockchain.type = "MessageType.RESPONSE_BLOCKCHAIN"
@@ -195,22 +181,22 @@ exports.broadCastBlockchain = (req, res) => {
 
         broadcast(JSON.stringify(responseBlockchain));
 
-        res.send("broadCastBlockchain broaded");
+        console.log("Blockchain data is broaded")
     })
 
 }
 
-exports.broadCastTransactionPool = (req, res) => {
+exports.broadCastTransactionPool = function() {
     const responseTransactionPoolMsg = new Message;
+
     Transaction_pool.find().then(data => {
         responseTransactionPoolMsg.type = "MessageType.RESPONSE_TRANSACTION_POOL"
         responseTransactionPoolMsg.data = data;
 
         broadcast(JSON.stringify(responseTransactionPoolMsg));
 
-        res.send("broadCastTransactionPool broaded");
+        console.log("Transaction Pool data is broaded")
     })
-
 }
 
 function broadcast(send_msg) {
@@ -229,4 +215,19 @@ exports.getP2PList = (req, res) => {
     }
 
     res.send(user_list);
+}
+
+exports.connecToPeers = (req, res) => {
+    const public_key = wallet.getPublicFromWallet_return();
+    const ws = new WebSocket("ws://localhost:" + p2p_port + "/" + public_key);
+
+    ws.on('open', () => {
+        res.send({ message: "Welcome to my p2p network" })
+        console.log(public_key + ' joined the room');
+    });
+
+    ws.on('error', () => {
+        console.log('connection failed');
+    });
+
 }

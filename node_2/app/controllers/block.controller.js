@@ -3,6 +3,7 @@ const CryptoJS = require('crypto-js')
 
 const transaction = require("./transaction.controller.js");
 const wallet = require("./wallet.controller.js");
+const p2p = require("./p2p.controller.js");
 
 const Transaction = require("../models/transaction.model.js");
 const UnspentTxOut = require("../models/unspentTxOut.model.js");
@@ -14,8 +15,7 @@ const DIFFICULTY_ADJUSTMENT_INTERVAL = 10;
 
 let unspentTxOuts = [];
 
-//done
-exports.generateGenesisBlock = (req, res) => {
+exports.generateGenesisBlock = function() {
     block.find()
         .then(data => {
             if (data.length == 0) {
@@ -38,19 +38,19 @@ exports.generateGenesisBlock = (req, res) => {
                 });
 
                 genesisblock.save().then(data => {
-                    res.send(data);
+                    console.log("Genesis Block is generated");
+
+                    //broadcast the blockchain data to other user
+                    p2p.broadCastBlockchain();
                 }).catch(err => {
-                    res.status(500).send({
-                        message: err.message || "Some error occurred while generate Gensis Block."
-                    });
+                    console.log(err);
                 });
             } else {
-                res.send({ message: "Gensis Block has generated!" })
+                console.log("Gensis Block has generated!");
             }
         });
 };
 
-//done
 exports.generateNextBlock = (req, res) => {
     block.find().sort({ 'index': -1 })
         .then(data => {
@@ -58,7 +58,7 @@ exports.generateNextBlock = (req, res) => {
             if (data !== null && typeof(data) != "undefined" && data.length !== 0) {
                 const previousBlock = new block(data[0]);
                 const nextIndex = previousBlock.index + 1;
-                const nextTimeStamp = new Date().getTime()
+                const nextTimeStamp = new Date().getTime();
                 const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), 0);
                 const block_data = coinbaseTx;
                 const difficulty = getDifficulty(previousBlock, data);
@@ -71,6 +71,8 @@ exports.generateNextBlock = (req, res) => {
 
                 transaction_pool.save().then(data => {
                     res.send(data);
+
+                    p2p.broadCastTransactionPool();
                 })
 
                 // const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
