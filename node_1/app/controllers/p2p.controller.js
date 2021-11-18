@@ -88,7 +88,7 @@ function initMessageHandler(ws) {
                         //update blockchain data in user database
                         block.find().then(block_data => {
 
-                            if (block_data > receivedBlockData.length) {
+                            if (block_data.length >= receivedBlockData.length) {
                                 console.log("Blockchian data already up to date.")
                             } else {
 
@@ -103,10 +103,35 @@ function initMessageHandler(ws) {
                                         difficulty: receivedBlockData[i].difficulty,
                                         nonce: receivedBlockData[i].nonce
                                     });
+
                                     new_block.save().then(data => {
-                                        console.log("Blockchian Updated");
+                                        console.log("Block " + receivedBlockData[i].index + " Updated");
+                                    })
+
+                                    //remove transaction pool data
+                                    Transaction_pool.find().then(transacton_pool_data => {
+
+                                        const array_transaction_data = Object.entries(receivedBlockData[i].data[1]);
+                                        for (let i = 0; i < transacton_pool_data.length; i++) {
+
+                                            if (array_transaction_data[0][1] == transacton_pool_data[i].id) {
+
+                                                Transaction_pool.findByIdAndRemove(transacton_pool_data[i]._id)
+                                                    .then(remove_data => {
+                                                        if (!remove_data) {
+                                                            console.log("Transaction pool not found with id " + transaction_pool_data[i]._id)
+                                                            return false;
+                                                        }
+                                                    })
+
+                                                break;
+                                            }
+                                        }
+
                                     })
                                 }
+
+
                             }
 
                         })
@@ -166,6 +191,14 @@ function initMessageHandler(ws) {
                         })
                     }
                 }
+
+                if (message.type == "MessageType.QUERY_TRANSACTION_POOL") {
+                    exports.broadCastTransactionPool();
+                }
+
+                if (message.type == "MessageType.QUERY_Blockchain") {
+                    exports.broadCastBlockchain();
+                }
             }
         } catch (e) {
             console.log(e);
@@ -197,6 +230,28 @@ exports.broadCastTransactionPool = function() {
 
         console.log("Transaction Pool data is broaded")
     })
+}
+
+exports.queryForBlockchainData = function() {
+    const queryBlockchainDataMsg = new Message;
+
+    queryBlockchainDataMsg.type = "MessageType.QUERY_Blockchain"
+    queryBlockchainDataMsg.data = null;
+
+    broadcast(JSON.stringify(queryBlockchainDataMsg));
+
+    console.log("Query Blockchain Msg is sent")
+}
+
+exports.queryForTransactionPoolData = function() {
+    const queryTransactionPoolDataMsg = new Message;
+
+    queryTransactionPoolDataMsg.type = "MessageType.QUERY_TRANSACTION_POOL"
+    queryTransactionPoolDataMsg.data = null;
+
+    broadcast(JSON.stringify(queryTransactionPoolDataMsg));
+
+    console.log("Query TransactionPool Msg is sent")
 }
 
 function broadcast(send_msg) {

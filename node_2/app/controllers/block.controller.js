@@ -54,7 +54,7 @@ exports.mineBlock = (req, res) => {
 
                                     p2p.broadCastBlockchain();
 
-                                    console.log("Mining Finish");
+                                    console.log("-------Mining Finish-------");
                                     console.log("Block " + nextIndex + " is generated");
                                     console.log("50 coin is earned");
                                 });
@@ -65,8 +65,12 @@ exports.mineBlock = (req, res) => {
                                         if (!remove_data) {
                                             console.log("Transaction pool not found with id " + transaction_pool_data[0]._id)
                                             return false;
+                                        } else {
+                                            p2p.broadCastTransactionPool();
                                         }
                                     })
+
+
                             } else {
                                 console.log("Mining failure")
                                 res.send({ message: "Mining failure" })

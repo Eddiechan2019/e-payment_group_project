@@ -53,14 +53,14 @@ function updateUnspentTxOuts(newTransactions, aUnspentTxOuts) {
 exports.processTransactions = function(aTransactions, aUnspentTxOuts, blockIndex) {
     //dont uncomment, this make a map bug
     // aTransactions = Array(aTransactions);
-    if (!valid.isValidTransactionsStructure(aTransactions)) {
-        return null;
-    }
+    // if (!valid.isValidTransactionsStructure(aTransactions)) {
+    //     return null;
+    // }
 
-    if (!valid.validateBlockTransactions(aTransactions, aUnspentTxOuts, blockIndex)) {
-        console.log('invalid block transactions');
-        return null;
-    }
+    // if (!valid.validateBlockTransactions(aTransactions, aUnspentTxOuts, blockIndex)) {
+    //     console.log('invalid block transactions');
+    //     return null;
+    // }
     return updateUnspentTxOuts(aTransactions, aUnspentTxOuts);
 }
 
