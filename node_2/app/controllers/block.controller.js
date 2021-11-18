@@ -15,6 +15,72 @@ const DIFFICULTY_ADJUSTMENT_INTERVAL = 10;
 
 let unspentTxOuts = [];
 
+exports.mineBlock = (req, res) => {
+    block.find().sort({ 'index': -1 })
+        .then(data => {
+            Transaction_pool.find().then(transaction_pool_data => {
+                if (transaction_pool_data.length != 0) {
+                    //check generate GenesisBlock is not
+                    if (data !== null && typeof(data) != "undefined" && data.length !== 0) {
+                        const previousBlock = new block(data[0]);
+                        const nextIndex = previousBlock.index + 1;
+                        const nextTimeStamp = new Date().getTime();
+                        const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), 0);
+                        const coinbase_data = coinbaseTx;
+                        const difficulty = getDifficulty(previousBlock, data);
+
+                        coinbase_transaction = new Transaction_pool({
+                            id: coinbase_data.id,
+                            txIns: coinbase_data.txIns,
+                            txOuts: coinbase_data.txOuts,
+                        });
+
+                        transaction_pool_for_block_data = new Transaction_pool({
+                            id: transaction_pool_data[0].id,
+                            txIns: transaction_pool_data[0].txIns,
+                            txOuts: transaction_pool_data[0].txOuts,
+                        })
+
+                        const block_data = []
+                        block_data[0] = coinbase_transaction;
+                        block_data[1] = transaction_pool_for_block_data;
+
+                        //add the block to blockchain
+                        const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
+                        unspentTxOutSchema.find().then(unspentTxOuts_data => {
+                            if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
+                                newblock.save().then(data => {
+                                    res.send(data);
+
+                                    p2p.broadCastBlockchain();
+
+                                    console.log("Mining Finish");
+                                    console.log("Block " + nextIndex + " is generated");
+                                    console.log("50 coin is earned");
+                                });
+
+                                //remove a transaction pool data
+                                Transaction_pool.findByIdAndRemove(transaction_pool_data[0]._id)
+                                    .then(remove_data => {
+                                        if (!remove_data) {
+                                            console.log("Transaction pool not found with id " + transaction_pool_data[0]._id)
+                                            return false;
+                                        }
+                                    })
+                            } else {
+                                console.log("Mining failure")
+                                res.send({ message: "Mining failure" })
+                            }
+                        })
+                    }
+                } else {
+                    console.log("There is no transaction for mining")
+                    res.send({ message: "There is no transaction for mining" })
+                }
+            })
+        });
+}
+
 exports.generateGenesisBlock = function() {
     block.find()
         .then(data => {
@@ -51,48 +117,6 @@ exports.generateGenesisBlock = function() {
         });
 };
 
-exports.generateNextBlock = (req, res) => {
-    block.find().sort({ 'index': -1 })
-        .then(data => {
-            //check generate GenesisBlock is not
-            if (data !== null && typeof(data) != "undefined" && data.length !== 0) {
-                const previousBlock = new block(data[0]);
-                const nextIndex = previousBlock.index + 1;
-                const nextTimeStamp = new Date().getTime();
-                const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), 0);
-                const block_data = coinbaseTx;
-                const difficulty = getDifficulty(previousBlock, data);
-
-                const transaction_pool = new Transaction_pool({
-                    id: block_data.id,
-                    txIns: block_data.txIns,
-                    txOuts: block_data.txOuts,
-                });
-
-                transaction_pool.save().then(data => {
-                    res.send(data);
-
-                    p2p.broadCastTransactionPool();
-                })
-
-                // const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
-                // unspentTxOutSchema.find().then(unspentTxOuts_data => {
-                //     if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
-
-                //         newblock.save().then(data => {
-                //             res.send(data);
-                //         });
-
-                //     }
-                // })
-
-            } else {
-                res.send({ message: "Please generate GenesisBlcok" })
-            }
-        });
-}
-
-//done
 exports.generatenextBlockWithTransaction = (req, res) => {
     block.find().sort({ 'index': -1 })
         .then(data => {
@@ -143,7 +167,6 @@ exports.generatenextBlockWithTransaction = (req, res) => {
         });
 }
 
-
 //get all block data
 exports.getAllBlockData = (req, res) => {
     block.find().sort({ 'index': -1 })
@@ -167,7 +190,37 @@ exports.getLastestBlock = (req, res) => {
         });
 }
 
-//done
+//for user get 50 coin
+exports.generateNextBlock = (req, res) => {
+    block.find().sort({ 'index': -1 })
+        .then(data => {
+            //check generate GenesisBlock is not
+            if (data !== null && typeof(data) != "undefined" && data.length !== 0) {
+                const previousBlock = new block(data[0]);
+                const nextIndex = previousBlock.index + 1;
+                const nextTimeStamp = new Date().getTime();
+                const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), 0);
+                const block_data = coinbaseTx;
+                const difficulty = getDifficulty(previousBlock, data);
+
+                const transaction_pool = new Transaction_pool({
+                    id: block_data.id,
+                    txIns: block_data.txIns,
+                    txOuts: block_data.txOuts,
+                });
+
+                transaction_pool.save().then(data => {
+                    res.send(data);
+
+                    p2p.broadCastTransactionPool();
+                })
+
+            } else {
+                res.send({ message: "Please generate GenesisBlcok" })
+            }
+        });
+}
+
 function addBlockToChain(newBlock, previousBlock, unspentTxOuts_data) {
     if (isValidNewBlock(newBlock, previousBlock)) {
 
@@ -246,7 +299,6 @@ function findblock(index, previousHash, timestamp, data, difficulty) {
                 difficulty: difficulty,
                 nonce: nonce
             });
-
             return newblock
         }
         nonce++;

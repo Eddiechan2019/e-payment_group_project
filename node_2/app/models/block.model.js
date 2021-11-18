@@ -5,7 +5,7 @@ const Transaction = mongoose.Schema({
     id: String,
     txIns: Array,
     txOuts: Array,
-});
+}, { versionKey: false });
 
 
 const blockSchema = mongoose.Schema({
@@ -13,9 +13,9 @@ const blockSchema = mongoose.Schema({
     hash: String,
     previousHash: String,
     timestamp: Number,
-    data: Transaction,
+    data: Array,
     difficulty: Number,
     nonce: Number
-});
+}, { versionKey: false });
 
 module.exports = mongoose.model(Config.express_port + '_' + 'block', blockSchema);

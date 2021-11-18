@@ -51,7 +51,8 @@ function updateUnspentTxOuts(newTransactions, aUnspentTxOuts) {
 }
 
 exports.processTransactions = function(aTransactions, aUnspentTxOuts, blockIndex) {
-    aTransactions = Array(aTransactions);
+    //dont uncomment, this make a map bug
+    // aTransactions = Array(aTransactions);
     if (!valid.isValidTransactionsStructure(aTransactions)) {
         return null;
     }
