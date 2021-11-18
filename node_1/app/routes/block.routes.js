@@ -2,7 +2,7 @@ module.exports = (app) => {
     const block = require('../controllers/block.controller.js');
 
 
-    app.post('/generatenextBlockWithTransaction', block.generatenextBlockWithTransaction);
+    app.post('/sendTransaction', block.generatenextBlockWithTransaction);
 
     app.post('/mineBlock', block.mineBlock);
 

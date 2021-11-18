@@ -152,14 +152,9 @@ exports.generatenextBlockWithTransaction = (req, res) => {
                     });
 
                     transaction_pool.save().then(data => {
-                            res.send(data);
-                        })
-                        // const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
-                        // if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
-                        //     newblock.save().then(data => {
-                        //         res.send(data);
-                        //     });
-                        // }
+                        res.send(data);
+                    })
+
                 })
             } else {
                 res.send({ message: "Please generate GenesisBlcok" })
