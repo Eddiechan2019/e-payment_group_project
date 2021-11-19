@@ -46,4 +46,6 @@ app.listen(Config.express_port, () => {
     console.log("Server is listening on port " + Config.express_port);
 
     block.generateGenesisBlock();
+
+    p2p.updateUnspectTxouts();
 });

@@ -157,6 +157,8 @@ exports.generatenextBlockWithTransaction = (req, res) => {
 
                     transaction_pool.save().then(data => {
                         res.send(data);
+
+                        p2p.broadCastTransactionPool();
                     })
 
                 })

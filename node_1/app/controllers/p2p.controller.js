@@ -7,6 +7,7 @@ const wallet = require("./wallet.controller.js");
 const Message = require("../models/p2p_message.model.js");
 const Transaction_pool = require("../models/transaction_pool.model.js")
 const block = require('../models/block.model.js');
+const unspentTxOut = require('../models/unspentTxOut_mongo.model.js');
 
 const p2p_port = Config.p2p_port;
 
@@ -119,7 +120,7 @@ function initMessageHandler(ws) {
                                                 Transaction_pool.findByIdAndRemove(transacton_pool_data[i]._id)
                                                     .then(remove_data => {
                                                         if (!remove_data) {
-                                                            console.log("Transaction pool not found with id " + transaction_pool_data[i]._id)
+                                                            console.log("Transaction pool not found with id " + transacton_pool_data[i]._id)
                                                             return false;
                                                         }
                                                     })
@@ -135,6 +136,8 @@ function initMessageHandler(ws) {
                             }
 
                         })
+
+                        exports.updateUnspectTxouts();
                     }
                 }
 
@@ -203,6 +206,137 @@ function initMessageHandler(ws) {
         } catch (e) {
             console.log(e);
         }
+    })
+}
+
+exports.updateUnspectTxouts = function() {
+    unspentTxOut.find().then(unspentTxOut_data => {
+        block.find().then(block_data => {
+
+            unspentTxOut_data_mongo_id = [];
+            has_valid = [];
+            for (let k = 0; k < unspentTxOut_data.length; k++) {
+                unspentTxOut_data_mongo_id[k] = unspentTxOut_data[k]._id.toString();
+            }
+
+            try {
+                var is_unspentTxOut_mining_reward = true;
+                var is_unspentTxOut_transaction = true;
+
+                for (let i = 1; i < block_data.length; i++) {
+
+                    //get mining gift record
+                    mining_reward_txOutId = block_data[i].data[0].id;
+                    mining_reward_txOutIndex = 0;
+                    mining_reward_address = block_data[i].data[0].txOuts[0].address;
+                    mining_reward_amount = block_data[i].data[0].txOuts[0].amount;
+
+                    transaction_txOutId = block_data[i].data[1].id;
+                    transaction_txOutIndex = 0;
+                    transaction_address = block_data[i].data[1].txOuts[0].address;
+                    transaction_amount = block_data[i].data[1].txOuts[0].amount;
+
+                    is_unspentTxOut_mining_reward = true;
+                    is_unspentTxOut_transaction = true;
+
+                    for (let j = i + 1; j < block_data.length; j++) {
+                        //for check mining reward has be used
+                        has_be_used = false;
+                        if (block_data[j].data[1].txIns[0].txOutId == mining_reward_txOutId &&
+                            block_data[j].data[1].txIns[0].txOutIndex == mining_reward_txOutIndex) {
+                            for (let w = 0; w < has_valid.length; w++) {
+
+                                if (j == has_valid[w]) {
+                                    has_be_used = true;
+                                }
+                            }
+
+                            if (has_be_used == false) {
+                                is_unspentTxOut_mining_reward = false;
+                            }
+                        }
+
+                        if (block_data[j].data[1].txIns[0].txOutId == transaction_txOutId &&
+                            block_data[j].data[1].txIns[0].txOutIndex == transaction_txOutIndex) {
+                            for (let w = 0; w < has_valid.length; w++) {
+                                if (j == has_valid[w]) {
+                                    has_be_used = true;
+                                }
+                            }
+
+                            if (has_be_used == false) {
+                                is_unspentTxOut_transaction = false;
+
+                                for (let e = j + 1; e < block_data.length; e++) {
+                                    if (block_data[e].data[1].txIns[0].txOutId == block_data[j].data[1].id &&
+                                        block_data[e].data[1].txIns[0].txOutIndex == 1) {
+                                        const unspentTxOut_data = new unspentTxOut({
+                                            txOutId: block_data[e].data[1].id,
+                                            txOutIndex: 1,
+                                            address: block_data[e].data[1].txOuts[1].address,
+                                            amount: block_data[e].data[1].txOuts[1].amount,
+                                        });
+
+                                        unspentTxOut_data.save().then(data => {});
+                                    } else {
+                                        const unspentTxOut_data = new unspentTxOut({
+                                            txOutId: block_data[j].data[1].id,
+                                            txOutIndex: 1,
+                                            address: block_data[j].data[1].txOuts[1].address,
+                                            amount: block_data[j].data[1].txOuts[1].amount,
+                                        });
+
+                                        unspentTxOut_data.save().then(data => {});
+                                    }
+                                }
+
+                            }
+                            has_valid.push(j);
+                        }
+                    }
+
+                    if (is_unspentTxOut_mining_reward == true) {
+                        const unspentTxOut_data = new unspentTxOut({
+                            txOutId: mining_reward_txOutId,
+                            txOutIndex: mining_reward_txOutIndex,
+                            address: mining_reward_address,
+                            amount: mining_reward_amount,
+                        });
+
+                        unspentTxOut_data.save().then(data => {});
+                    }
+
+                    if (is_unspentTxOut_transaction == true) {
+                        const unspentTxOut_data = new unspentTxOut({
+                            txOutId: transaction_txOutId,
+                            txOutIndex: transaction_txOutIndex,
+                            address: transaction_address,
+                            amount: transaction_amount,
+                        });
+
+                        unspentTxOut_data.save().then(data => {});
+                    }
+
+                }
+
+                for (let q = 0; q < unspentTxOut_data_mongo_id.length; q++) {
+                    unspentTxOut.findByIdAndRemove(unspentTxOut_data_mongo_id[q])
+                        .then(remove_data => {
+                            if (!remove_data) {
+                                console.log("UnspentTxOut not found with id " + unspentTxOut_data_mongo_id[q]._id)
+                                return false;
+                            }
+                        })
+
+                }
+
+                console.log("UnspentTxOut is updated")
+
+            } catch (e) {
+                console.log(e);
+            }
+
+        })
     })
 }
 
