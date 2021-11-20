@@ -68,7 +68,6 @@ function initMessageHandler(ws) {
                 console.log('could not parse received JSON message: ' + data);
                 return;
             }
-
             //console.log('Received message: %s', message);
 
             // message between uesr
@@ -139,10 +138,12 @@ function initMessageHandler(ws) {
 
                         exports.updateUnspectTxouts();
                     }
+                    exports.updateUnspectTxouts();
                 }
 
                 //receive the transaction pool data
                 if (message.type == "MessageType.RESPONSE_TRANSACTION_POOL") {
+                    exports.updateUnspectTxouts();
                     const receivedTransactions = message.data;
                     if (receivedTransactions === null) {
                         console.log('invalid transaction received: %s', JSON.stringify(message.data));
@@ -213,129 +214,89 @@ exports.updateUnspectTxouts = function() {
     unspentTxOut.find().then(unspentTxOut_data => {
         block.find().then(block_data => {
 
-            unspentTxOut_data_mongo_id = [];
-            has_valid = [];
+            //store the past unspent record ID 
+            var unspentTxOut_data_mongo_id = []
             for (let k = 0; k < unspentTxOut_data.length; k++) {
                 unspentTxOut_data_mongo_id[k] = unspentTxOut_data[k]._id.toString();
             }
 
-            try {
-                var is_unspentTxOut_mining_reward = true;
-                var is_unspentTxOut_transaction = true;
+            var unspentTxOut_array = [];
+            var unspentTxOut_row = [];
+            //get mining reward transaction record
+            for (let i = 1; i < block_data.length; i++) {
+                mining_reward_txOutId = block_data[i].data[0].id;
+                mining_reward_txOutIndex = 0;
+                mining_reward_address = block_data[i].data[0].txOuts[0].address;
+                mining_reward_amount = block_data[i].data[0].txOuts[0].amount;
 
-                for (let i = 1; i < block_data.length; i++) {
+                unspentTxOut_row = [mining_reward_txOutId, mining_reward_txOutIndex, mining_reward_address, mining_reward_amount, 0];
+                unspentTxOut_array.push(unspentTxOut_row);
 
-                    //get mining gift record
-                    mining_reward_txOutId = block_data[i].data[0].id;
-                    mining_reward_txOutIndex = 0;
-                    mining_reward_address = block_data[i].data[0].txOuts[0].address;
-                    mining_reward_amount = block_data[i].data[0].txOuts[0].amount;
-
+                //get transaction txOuts record
+                //how many txOuts in the transaction
+                for (let k = 0; k < block_data[i].data[1].txOuts.length; k++) {
                     transaction_txOutId = block_data[i].data[1].id;
-                    transaction_txOutIndex = 0;
-                    transaction_address = block_data[i].data[1].txOuts[0].address;
-                    transaction_amount = block_data[i].data[1].txOuts[0].amount;
+                    transaction_txOutIndex = k;
+                    transaction_address = block_data[i].data[1].txOuts[k].address;
+                    transaction_amount = block_data[i].data[1].txOuts[k].amount;
 
-                    is_unspentTxOut_mining_reward = true;
-                    is_unspentTxOut_transaction = true;
-
-                    for (let j = i + 1; j < block_data.length; j++) {
-                        //for check mining reward has be used
-                        has_be_used = false;
-                        if (block_data[j].data[1].txIns[0].txOutId == mining_reward_txOutId &&
-                            block_data[j].data[1].txIns[0].txOutIndex == mining_reward_txOutIndex) {
-                            for (let w = 0; w < has_valid.length; w++) {
-
-                                if (j == has_valid[w]) {
-                                    has_be_used = true;
-                                }
-                            }
-
-                            if (has_be_used == false) {
-                                is_unspentTxOut_mining_reward = false;
-                            }
-                        }
-
-                        if (block_data[j].data[1].txIns[0].txOutId == transaction_txOutId &&
-                            block_data[j].data[1].txIns[0].txOutIndex == transaction_txOutIndex) {
-                            for (let w = 0; w < has_valid.length; w++) {
-                                if (j == has_valid[w]) {
-                                    has_be_used = true;
-                                }
-                            }
-
-                            if (has_be_used == false) {
-                                is_unspentTxOut_transaction = false;
-
-                                for (let e = j + 1; e < block_data.length; e++) {
-                                    if (block_data[e].data[1].txIns[0].txOutId == block_data[j].data[1].id &&
-                                        block_data[e].data[1].txIns[0].txOutIndex == 1) {
-                                        const unspentTxOut_data = new unspentTxOut({
-                                            txOutId: block_data[e].data[1].id,
-                                            txOutIndex: 1,
-                                            address: block_data[e].data[1].txOuts[1].address,
-                                            amount: block_data[e].data[1].txOuts[1].amount,
-                                        });
-
-                                        unspentTxOut_data.save().then(data => {});
-                                    } else {
-                                        const unspentTxOut_data = new unspentTxOut({
-                                            txOutId: block_data[j].data[1].id,
-                                            txOutIndex: 1,
-                                            address: block_data[j].data[1].txOuts[1].address,
-                                            amount: block_data[j].data[1].txOuts[1].amount,
-                                        });
-
-                                        unspentTxOut_data.save().then(data => {});
-                                    }
-                                }
-
-                            }
-                            has_valid.push(j);
-                        }
-                    }
-
-                    if (is_unspentTxOut_mining_reward == true) {
-                        const unspentTxOut_data = new unspentTxOut({
-                            txOutId: mining_reward_txOutId,
-                            txOutIndex: mining_reward_txOutIndex,
-                            address: mining_reward_address,
-                            amount: mining_reward_amount,
-                        });
-
-                        unspentTxOut_data.save().then(data => {});
-                    }
-
-                    if (is_unspentTxOut_transaction == true) {
-                        const unspentTxOut_data = new unspentTxOut({
-                            txOutId: transaction_txOutId,
-                            txOutIndex: transaction_txOutIndex,
-                            address: transaction_address,
-                            amount: transaction_amount,
-                        });
-
-                        unspentTxOut_data.save().then(data => {});
-                    }
-
+                    unspentTxOut_row = [transaction_txOutId, transaction_txOutIndex, transaction_address, transaction_amount, 0];
+                    unspentTxOut_array.push(unspentTxOut_row);
                 }
-
-                for (let q = 0; q < unspentTxOut_data_mongo_id.length; q++) {
-                    unspentTxOut.findByIdAndRemove(unspentTxOut_data_mongo_id[q])
-                        .then(remove_data => {
-                            if (!remove_data) {
-                                console.log("UnspentTxOut not found with id " + unspentTxOut_data_mongo_id[q]._id)
-                                return false;
-                            }
-                        })
-
-                }
-
-                console.log("UnspentTxOut is updated")
-
-            } catch (e) {
-                console.log(e);
             }
 
+            //check what Txout is used
+            for (let j = 1; j < block_data.length; j++) {
+
+                //how many txIns in the transaction
+                for (let k = 0; k < block_data[j].data[1].txIns.length; k++) {
+                    check_txOutId = block_data[j].data[1].txIns[k].txOutId;
+                    checkTxOutIndex = block_data[j].data[1].txIns[k].txOutIndex;
+
+                    //check whether there is not txIns 
+                    if (check_txOutId != "" && check_txOutId != 0) {
+                        for (let w = 0; w < unspentTxOut_array.length; w++) {
+                            txOutId = unspentTxOut_array[w][0];
+                            xOutIndex = unspentTxOut_array[w][1];
+                            address = unspentTxOut_array[w][2];
+                            amount = unspentTxOut_array[w][3];
+
+                            if (check_txOutId == txOutId && checkTxOutIndex == xOutIndex) {
+                                unspentTxOut_array[w][4] = -1;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            //save unspentTxOut
+            for (let s = 0; s < unspentTxOut_array.length; s++) {
+
+                if (unspentTxOut_array[s][4] != -1 && unspentTxOut_array[s][4] == 0) {
+
+                    const unspentTxOut_data = new unspentTxOut({
+                        txOutId: unspentTxOut_array[s][0],
+                        txOutIndex: unspentTxOut_array[s][1],
+                        address: unspentTxOut_array[s][2],
+                        amount: unspentTxOut_array[s][3],
+                    });
+
+                    unspentTxOut_data.save().then(data => {});
+                }
+            }
+
+            //remove the past unspent record
+            for (let q = 0; q < unspentTxOut_data_mongo_id.length; q++) {
+                unspentTxOut.findByIdAndRemove(unspentTxOut_data_mongo_id[q])
+                    .then(remove_data => {
+                        if (!remove_data) {
+                            console.log("UnspentTxOut not found with id " + unspentTxOut_data_mongo_id[q]._id)
+                            return false;
+                        }
+                    })
+
+            }
         })
     })
 }
