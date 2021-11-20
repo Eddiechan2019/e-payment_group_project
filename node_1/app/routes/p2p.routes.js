@@ -6,4 +6,6 @@ module.exports = (app) => {
 
     app.get('/broadCastTransactionPool', p2p.broadCastTransactionPool)
     app.get('/broadCastBlockchain', p2p.broadCastBlockchain)
+
+    app.get('/getWalletAmount', p2p.getWalletAmount);
 }

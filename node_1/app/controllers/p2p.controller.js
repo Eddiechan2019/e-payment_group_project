@@ -301,6 +301,25 @@ exports.updateUnspectTxouts = function() {
     })
 }
 
+exports.getWalletAmount = (req, res) => {
+    exports.updateUnspectTxouts
+
+    unspentTxOut.find().then(unspentTxOut_data => {
+        wallet_address = wallet.getPublicFromWallet_return();
+
+        var wallet_amount = 0;
+
+        for (var i = 0; i < unspentTxOut_data.length; i++) {
+            if (unspentTxOut_data[i].address == wallet_address) {
+                wallet_amount = wallet_amount + unspentTxOut_data[i].amount;
+            }
+        }
+
+        res.send({ message: wallet_amount })
+    });
+}
+
+
 exports.broadCastBlockchain = function() {
     const responseBlockchain = new Message;
     block.find().then(data => {
