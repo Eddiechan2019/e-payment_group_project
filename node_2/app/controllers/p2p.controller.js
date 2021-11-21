@@ -73,20 +73,21 @@ ws.onmessage = function(received_data) {
                             //remove transaction pool data
                             Transaction_pool.find().then(transacton_pool_data => {
 
-                                const array_transaction_data = Object.entries(receivedBlockData[i].data[1]);
-                                for (let i = 0; i < transacton_pool_data.length; i++) {
-                                    console.log(array_transaction_data[0]);
-                                    if (array_transaction_data[0][1] == transacton_pool_data[i].id && array_transaction_data[0][1] != undefined) {
+                                if (receivedBlockData[i].data[1] != undefined) {
+                                    const array_transaction_data = Object.entries(receivedBlockData[i].data[1]);
+                                    for (let i = 0; i < transacton_pool_data.length; i++) {
+                                        if (array_transaction_data[0][1] == transacton_pool_data[i].id && array_transaction_data[0][1] != undefined) {
 
-                                        Transaction_pool.findByIdAndRemove(transacton_pool_data[i]._id)
-                                            .then(remove_data => {
-                                                if (!remove_data) {
-                                                    console.log("Transaction pool not found with id " + transacton_pool_data[i]._id)
-                                                    return false;
-                                                }
-                                            })
+                                            Transaction_pool.findByIdAndRemove(transacton_pool_data[i]._id)
+                                                .then(remove_data => {
+                                                    if (!remove_data) {
+                                                        console.log("Transaction pool not found with id " + transacton_pool_data[i]._id)
+                                                        return false;
+                                                    }
+                                                })
 
-                                        break;
+                                            break;
+                                        }
                                     }
                                 }
 

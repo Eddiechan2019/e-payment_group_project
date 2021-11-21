@@ -8,4 +8,14 @@ const unspentTxOutSchema = mongoose.Schema({
     amount: Number,
 });
 
-module.exports = mongoose.model(Config.express_port + '_' + 'unspentTxOut', unspentTxOutSchema);
+class UnspentTxOut {
+    constructor(txOutId, txOutIndex, address, amount) {
+        this.txOutId = txOutId;
+        this.txOutIndex = txOutIndex;
+        this.address = address;
+        this.amount = amount;
+    }
+}
+
+
+module.exports = UnspentTxOut;
