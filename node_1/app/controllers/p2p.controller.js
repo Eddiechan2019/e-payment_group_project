@@ -1,7 +1,14 @@
 const WebSocket = require('ws');
 const WebSocketServer = require('ws').Server;
-const url = require('url')
+
 const Config = require('../../config/config.js');
+const redis = require("redis");
+const redis_client = redis.createClient(Config.REDIS_PORT, Config.REDIS_HOST, Config.REDIS_OPTS);
+redis_client.on("error", function(err) {
+    console.log("Error:" + err);
+});
+
+const url = require('url')
 const wallet = require("./wallet.controller.js");
 
 const Message = require("../models/p2p_message.model.js");
@@ -211,14 +218,15 @@ function initMessageHandler(ws) {
 }
 
 exports.updateUnspectTxouts = function() {
-    unspentTxOut.find().then(unspentTxOut_data => {
-        block.find().then(block_data => {
+    // unspentTxOut.find().then(unspentTxOut_data => {
+
+    block.find().then(block_data => {
 
             //store the past unspent record ID 
-            var unspentTxOut_data_mongo_id = []
-            for (let k = 0; k < unspentTxOut_data.length; k++) {
-                unspentTxOut_data_mongo_id[k] = unspentTxOut_data[k]._id.toString();
-            }
+            // var unspentTxOut_data_mongo_id = []
+            // for (let k = 0; k < unspentTxOut_data.length; k++) {
+            //     unspentTxOut_data_mongo_id[k] = unspentTxOut_data[k]._id.toString();
+            // }
 
             var unspentTxOut_array = [];
             var unspentTxOut_row = [];
@@ -271,6 +279,8 @@ exports.updateUnspectTxouts = function() {
             }
 
             //save unspentTxOut
+            redis_client.set("Length", unspentTxOut_array.length);
+            var unspentTxOut_array_for_redis = []
             for (let s = 0; s < unspentTxOut_array.length; s++) {
 
                 if (unspentTxOut_array[s][4] != -1 && unspentTxOut_array[s][4] == 0) {
@@ -282,29 +292,35 @@ exports.updateUnspectTxouts = function() {
                         amount: unspentTxOut_array[s][3],
                     });
 
-                    unspentTxOut_data.save().then(data => {});
+                    //save in redit
+                    unspentTxOut_array_for_redis.push(unspentTxOut_data);
+
+                    // unspentTxOut_data.save().then(data => {});
                 }
             }
 
-            //remove the past unspent record
-            for (let q = 0; q < unspentTxOut_data_mongo_id.length; q++) {
-                unspentTxOut.findByIdAndRemove(unspentTxOut_data_mongo_id[q])
-                    .then(remove_data => {
-                        if (!remove_data) {
-                            console.log("UnspentTxOut not found with id " + unspentTxOut_data_mongo_id[q]._id)
-                            return false;
-                        }
-                    })
+            redis_client.set("unspentData", JSON.stringify(unspentTxOut_array_for_redis));
 
-            }
+            // //remove the past unspent record
+            // for (let q = 0; q < unspentTxOut_data_mongo_id.length; q++) {
+            //     unspentTxOut.findByIdAndRemove(unspentTxOut_data_mongo_id[q])
+            //         .then(remove_data => {
+            //             if (!remove_data) {
+            //                 console.log("UnspentTxOut not found with id " + unspentTxOut_data_mongo_id[q]._id)
+            //                 return false;
+            //             }
+            //         })
+
+            // }
         })
-    })
+        // })
 }
 
 exports.getWalletAmount = (req, res) => {
     exports.updateUnspectTxouts
 
-    unspentTxOut.find().then(unspentTxOut_data => {
+    redis_client.get("unspentData", function(err, results) {
+        unspentTxOut_data = JSON.parse(results);
         wallet_address = wallet.getPublicFromWallet_return();
 
         var wallet_amount = 0;
@@ -319,6 +335,14 @@ exports.getWalletAmount = (req, res) => {
     });
 }
 
+exports.getUnspentData_array = function() {
+
+    redis_client.get("unspentData", function(err, results) {
+        const data = JSON.parse(results)
+        console.log(data.length)
+    });
+
+}
 
 exports.broadCastBlockchain = function() {
     const responseBlockchain = new Message;

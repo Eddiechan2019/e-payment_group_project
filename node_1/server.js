@@ -48,4 +48,5 @@ app.listen(Config.express_port, () => {
     block.generateGenesisBlock();
 
     p2p.updateUnspectTxouts();
+    console.log(p2p.getUnspentData_array());
 });
