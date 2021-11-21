@@ -1,6 +1,13 @@
 const block = require('../models/block.model.js');
 const CryptoJS = require('crypto-js')
 
+const Config = require('../../config/config.js');
+const redis = require("redis");
+const redis_client = redis.createClient(Config.REDIS_PORT, Config.REDIS_HOST, Config.REDIS_OPTS);
+redis_client.on("error", function(err) {
+    console.log("Error:" + err);
+});
+
 const transaction = require("./transaction.controller.js");
 const wallet = require("./wallet.controller.js");
 const p2p = require("./p2p.controller.js");
@@ -47,7 +54,8 @@ exports.mineBlock = (req, res) => {
 
                         //add the block to blockchain
                         const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
-                        unspentTxOutSchema.find().then(unspentTxOuts_data => {
+                        redis_client.get("unspentData", function(err, results) {
+                            unspentTxOuts_data = JSON.parse(results);
                             if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
                                 newblock.save().then(data => {
                                     res.send(data);
@@ -136,7 +144,8 @@ exports.generatenextBlockWithTransaction = (req, res) => {
 
                 //const coinbaseTx = transaction.getCoinbaseTransaction(wallet.getPublicFromWallet_return(), nextIndex);
 
-                unspentTxOutSchema.find().then(unspentTxOuts_data => {
+                redis_client.get("unspentData", function(err, results) {
+                    unspentTxOuts_data = JSON.parse(results);
                     const tx = transaction.createTransaction(receiverAddress, amount, wallet.getPrivateFromWallet_return(), unspentTxOuts_data);
 
                     // const block_data = new Transaction([coinbaseTx, tx]);
@@ -230,27 +239,30 @@ function addBlockToChain(newBlock, previousBlock, unspentTxOuts_data) {
             return false;
         } else {
 
-            for (let j = 0; j < unspentTxOuts_data.length; j++) {
-                unspentTxOutSchema.findByIdAndRemove(unspentTxOuts_data[j]._id)
-                    .then(transaciton => {
-                        if (!transaciton) {
-                            console.log("unspent Transaction not found with id " + unspentTxOuts_data[j]._id)
-                            return false;
-                        }
-                    })
+            // for (let j = 0; j < unspentTxOuts_data.length; j++) {
+            //     unspentTxOutSchema.findByIdAndRemove(unspentTxOuts_data[j]._id)
+            //         .then(transaciton => {
+            //             if (!transaciton) {
+            //                 console.log("unspent Transaction not found with id " + unspentTxOuts_data[j]._id)
+            //                 return false;
+            //             }
+            //         })
 
-            }
+            // }
 
-            for (let i = 0; i < retVal.length; i++) {
-                unspentTxOuts_mongo = new unspentTxOutSchema({
-                    txOutId: retVal[i].txOutId,
-                    txOutIndex: retVal[i].txOutIndex,
-                    address: retVal[i].address,
-                    amount: retVal[i].amount,
-                });
+            // for (let i = 0; i < retVal.length; i++) {
+            //     unspentTxOuts_mongo = new unspentTxOutSchema({
+            //         txOutId: retVal[i].txOutId,
+            //         txOutIndex: retVal[i].txOutIndex,
+            //         address: retVal[i].address,
+            //         amount: retVal[i].amount,
+            //     });
 
-                unspentTxOuts_mongo.save();
-            }
+            //     unspentTxOuts_mongo.save();
+            // }
+
+
+            p2p.updateUnspectTxouts();
 
             unspentTxOuts = retVal;
 

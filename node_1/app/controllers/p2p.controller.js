@@ -317,8 +317,7 @@ exports.updateUnspectTxouts = function() {
 }
 
 exports.getWalletAmount = (req, res) => {
-    exports.updateUnspectTxouts
-
+    exports.updateUnspectTxouts();
     redis_client.get("unspentData", function(err, results) {
         unspentTxOut_data = JSON.parse(results);
         wallet_address = wallet.getPublicFromWallet_return();

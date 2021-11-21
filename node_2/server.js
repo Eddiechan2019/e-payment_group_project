@@ -44,6 +44,4 @@ require('./app/routes/p2p.routes.js')(app);
 // listen for requests
 app.listen(Config.express_port, () => {
     console.log("Server is listening on port " + Config.express_port);
-
-    console.log(p2p.getUnspentData_array());
 });
