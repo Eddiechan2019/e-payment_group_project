@@ -16,8 +16,8 @@ const Transaction = require("../models/transaction.model.js");
 const UnspentTxOut = require("../models/unspentTxOut.model.js");
 const Transaction_pool = require("../models/transaction_pool.model.js");
 
-const BLOCK_GENERATION_INTERVAL = 10;
-const DIFFICULTY_ADJUSTMENT_INTERVAL = 10;
+const BLOCK_GENERATION_INTERVAL = Config.BLOCK_GENERATION_INTERVAL;
+const DIFFICULTY_ADJUSTMENT_INTERVAL = Config.DIFFICULTY_ADJUSTMENT_INTERVAL;
 
 let unspentTxOuts = [];
 
@@ -291,7 +291,7 @@ function getAdjustedDifficulty(latestBlock, allBlockData) {
     //sorting - blockchain.lenght - diff.. = diffic.. + 1
     const prevAdjustmentBlock = allBlockData[DIFFICULTY_ADJUSTMENT_INTERVAL]
     const timeExpected = BLOCK_GENERATION_INTERVAL * DIFFICULTY_ADJUSTMENT_INTERVAL;
-    const timeTaken = latestBlock.timestamp - prevAdjustmentBlock.timestamp;
+    const timeTaken = (Math.floor(latestBlock.timestamp / 1000)) - (Math.floor(prevAdjustmentBlock.timestamp / 1000));
 
     if (timeTaken < timeExpected) {
         return prevAdjustmentBlock.difficulty * (timeExpected / timeTaken);
@@ -328,7 +328,7 @@ function findblock(index, previousHash, timestamp, data, difficulty) {
 //check hash is correct in terms of difficulty
 function hashMatchesDifficulty(hash, difficulty) {
     const hashInBinary = hexToBinary(hash);
-    const requiredPrefix = '0'.repeat(difficulty);
+    const requiredPrefix = '0'.repeat(parseInt(difficulty, 0));
     return hashInBinary.startsWith(requiredPrefix);
 }
 
@@ -361,6 +361,21 @@ function isValidNewBlock(newBlock, previousBlock) {
     return true;
 }
 
-function hexToBinary(hex) {
-    return ("00000000" + (parseInt(hex, 16)).toString(2)).substr(-8);
+function hexToBinary(s) {
+    let ret = '';
+    const lookupTable = {
+        '0': '0000', '1': '0001', '2': '0010', '3': '0011', '4': '0100',
+        '5': '0101', '6': '0110', '7': '0111', '8': '1000', '9': '1001',
+        'a': '1010', 'b': '1011', 'c': '1100', 'd': '1101',
+        'e': '1110', 'f': '1111'
+    };
+    for (let i = 0; i < s.length; i = i + 1) {
+        if (lookupTable[s[i]]) {
+            ret += lookupTable[s[i]];
+        } else {
+            return null;
+        }
+    }
+    return ret;
+    //return ("00000000" + (parseInt(hex, 16)).toString(2)).substr(-8);
 }

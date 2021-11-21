@@ -130,7 +130,7 @@ function findTxOutsForAmount(amount, myUnspentTxOuts) {
             }
         }
     }
-    throw Error('not enough coins to send transaction');
+    console.log('not enough coins to send transaction');
 }
 
 //generate transaction ID
