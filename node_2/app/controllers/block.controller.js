@@ -56,7 +56,13 @@ exports.mineBlock = (req, res) => {
                         const newblock = findblock(nextIndex, previousBlock.hash, nextTimeStamp, block_data, difficulty)
                         redis_client.get("unspentData", function(err, results) {
                             unspentTxOuts_data = JSON.parse(results);
-                            if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data)) {
+
+                            const unspentTxOuts_data_array = []
+                            for (var i = 0; i < unspentTxOuts_data.length; i++) {
+                                unspentTxOuts_data_array.push(unspentTxOuts_data[i].txOutId);
+                            }
+
+                            if (addBlockToChain(newblock, previousBlock, unspentTxOuts_data_array)) {
                                 newblock.save().then(data => {
                                     res.send(data);
 
@@ -146,7 +152,12 @@ exports.generatenextBlockWithTransaction = (req, res) => {
 
                 redis_client.get("unspentData", function(err, results) {
                     unspentTxOuts_data = JSON.parse(results);
-                    const tx = transaction.createTransaction(receiverAddress, amount, wallet.getPrivateFromWallet_return(), unspentTxOuts_data);
+
+                    const unspentTxOuts_data_array = []
+                    for (var i = 0; i < unspentTxOuts_data.length; i++) {
+                        unspentTxOuts_data_array.push(unspentTxOuts_data[i].txOutId);
+                    }
+                    const tx = transaction.createTransaction(receiverAddress, amount, wallet.getPrivateFromWallet_return(), unspentTxOuts_data_array);
 
                     // const block_data = new Transaction([coinbaseTx, tx]);
                     const block_data = new Transaction(
